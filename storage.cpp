@@ -22,15 +22,18 @@ storage::~storage(){
 
 
 
-void storage::writeRecord(std::fstream &Dout, std::string &name, std::string &password, const unsigned char *key, const unsigned char *iv,const unsigned char *key2, const unsigned char *iv2){
+void storage::writeRecord(std::fstream &Dout, std::string &name, std::string &password, const unsigned char *key, const unsigned char *iv, const unsigned char *key2, const unsigned char *iv2) {
     std::string truncatedName = name.substr(0, NAME_WIDTH);
     std::string truncatedPass = password.substr(0, PASS_WIDTH);
     std::string paddedName = truncatedName;
     std::string paddedPass = truncatedPass;
+    
     paddedName.resize(NAME_WIDTH, '\0');
-    paddedName.resize(PASS_WIDTH, '\0');
+    paddedPass.resize(PASS_WIDTH, '\0');
+    Dout.seekp(0, std::ios::end); 
+
     Dout.write(paddedName.c_str(), NAME_WIDTH);
-    Dout.write(paddedName.c_str(), NAME_WIDTH);
+    Dout.write(paddedPass.c_str(), PASS_WIDTH);
     Dout.write(reinterpret_cast<const char*>(key), KEY_WIDTH);
     Dout.write(reinterpret_cast<const char*>(iv), IV_WIDTH);
     Dout.write(reinterpret_cast<const char*>(key2), KEY_WIDTH2);
@@ -39,58 +42,78 @@ void storage::writeRecord(std::fstream &Dout, std::string &name, std::string &pa
 
 
 
+
 void storage::readRecord(std::fstream &Din, std::string &Name) {
+    std::string searchBuffer(RECORD_SIZE, '\0');
     
+    Din.seekg(0, std::ios::end);
+    int n = Din.tellg() / RECORD_SIZE;
+    //std::cout << n << std::endl;
+    Din.seekg(0, std::ios::beg);  
     
+    int pos = -1;  
     
-    
-    //search for name after its already sorted
-    
-    
-    
-    //instead of 0, we will use record size * index
-    Din.seekg(0, std::ios::beg);
-    unsigned char keyArray[KEY_WIDTH];
-    unsigned char ivArray[IV_WIDTH];
-    unsigned char keyArray2[KEY_WIDTH];
-    unsigned char ivArray2[IV_WIDTH];
+    for (int i = 0; i < n; ++i) {
 
-    std::string buffer(RECORD_SIZE, NULL);
-    Din.read(&buffer[0], RECORD_SIZE);
-    Din.gcount();
-    if (Din.gcount() != RECORD_SIZE) {
-    std::cerr << "Failed to read complete record. Read only " << Din.gcount() << " bytes.\n";
+        Din.seekg(i * RECORD_SIZE, std::ios::beg);
+        Din.read(&searchBuffer[0], RECORD_SIZE);
+        
+        std::string encryptedName = searchBuffer.substr(0, NAME_WIDTH);
+        //std::string paddedEncryptedName = encryptedName;
+        //paddedEncryptedName.resize(NAME_WIDTH, '\0');
+        
+        std::vector<unsigned char> keyVec(searchBuffer.begin() + NAME_WIDTH + PASS_WIDTH, searchBuffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH);
+        std::vector<unsigned char> ivVec(searchBuffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH, searchBuffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH);
+
+        unsigned char keyArray[KEY_WIDTH];
+        unsigned char ivArray[IV_WIDTH];
+        
+        std::memcpy(keyArray, keyVec.data(), KEY_WIDTH);
+        std::memcpy(ivArray, ivVec.data(), IV_WIDTH);
+        
+        
+        std::string encryptedSearch = encrypt(Name, keyArray, ivArray);
+        std::string truncatedsearch = encryptedSearch.substr(0,NAME_WIDTH);
+        //std::cout << "ENCRYPT FILE - " << encryptedName << std::endl;
+        //std::cout << "ENCRYPTED SEARCH - " << truncatedsearch << std::endl;
+
+
+
+        std::string decryptedName = decrypt(encryptedName, keyArray, ivArray);
+        std::string decryptedSearch = decrypt(truncatedsearch, keyArray, ivArray);
+        //std::cout << "DECYRPT FILE - " << decryptedName << std::endl;
+        //std::cout << "DECYRPTED SEARCH - " << decryptedSearch << std::endl;
+
+
+        /*std::cout << "Key (pre): ";
+        for (unsigned char byte : keyArray) {
+            std::cout << std::hex << (int)byte << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "IV (pre): ";
+            for (unsigned char byte : ivArray) {
+                std::cout << std::hex << (int)byte << " ";
+            }
+        std::cout << std::endl;
+*/
+
+    int result = decryptedSearch.compare(decryptedName);
+    //std::cout << result << std::endl;
+
+        if (result == 0) {
+            pos = Din.tellg();
+            std::cout << "Record found at byte: " << pos << std::endl;
+            break;
+        }
+        else std::cout << "Record not found!" << std::endl;
     }
-
-    std::string name = buffer.substr(0, NAME_WIDTH);
-    std::string pass = buffer.substr(NAME_WIDTH, PASS_WIDTH);
-    std::vector<unsigned char> keyVec(buffer.begin() + NAME_WIDTH + PASS_WIDTH, buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH);
-    std::vector<unsigned char> ivVec(buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH, buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH);
-
-
-
-    std::vector<unsigned char> keyVec2(buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH, buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH + KEY_WIDTH2);
-    std::vector<unsigned char> ivVec2(buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH + KEY_WIDTH2, buffer.begin() + NAME_WIDTH + PASS_WIDTH + KEY_WIDTH + IV_WIDTH + KEY_WIDTH2 + IV_WIDTH2);
     
-    std::memcpy(keyArray, keyVec.data(), KEY_WIDTH);
-    std::memcpy(ivArray, ivVec.data(), IV_WIDTH);
-    std::memcpy(keyArray2, keyVec2.data(), KEY_WIDTH2);
-    std::memcpy(ivArray2, ivVec2.data(), IV_WIDTH2);
-
-//std::cout << "Reading from: " <<  PIN_WIDTH + KEY_WIDTH << "-" << PIN_WIDTH + KEY_WIDTH + IV_WIDTH << std::endl;
-
-//std::cout << "Reading from: " <<  PIN_WIDTH << "-" << PIN_WIDTH+KEY_WIDTH << std::endl;
-//std::cout << "Reading from: 0-" << PIN_WIDTH << std::endl;
-    //std::cout << "PIN (PRE): " << pin << std::endl;
-
-    
-    std::string decryptedName = decrypt(name, keyArray, ivArray);
-    std::string decryptedPass = decrypt(pass, keyArray, ivArray);
-    
-    std::cout << "Decrypted NAME: " << decryptedName << std::endl;
-    std::cout << "Decrypted PASS: " << decryptedPass << std::endl;
+        
     
 }
+
+
 
 
 bool storage::addPassword(std::string &name, std::string &password){
@@ -125,7 +148,23 @@ bool storage::addPassword(std::string &name, std::string &password){
     }
 
     std::string encrypted_Name = encrypt(name, key, iv);
+    //std::cout << "Initial Encrypt " << encrypted_Name << std::endl;
     std::string encrypted_Pass = encrypt(password, key2, iv2);
+
+
+    std::cout << "Key (pre): ";
+        for (unsigned char byte : key) {
+            std::cout << std::hex << (int)byte << " ";
+        }
+    std::cout << std::endl;
+
+    std::cout << "IV (pre): ";
+        for (unsigned char byte : iv) {
+            std::cout << std::hex << (int)byte << " ";
+        }
+    std::cout << std::endl;
+
+    
     writeRecord(file, encrypted_Name, encrypted_Pass, key, iv, key2, iv2);
 
 
@@ -141,6 +180,7 @@ file.open("user.data");
     if(!file.is_open()){
         std::cerr << "Error Opening File" << std::endl;
     }
+
 readRecord(file, name);
 return true;
 }
