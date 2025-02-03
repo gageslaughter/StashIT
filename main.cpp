@@ -21,6 +21,7 @@ bool quit = false;
 
 system("clear");
 Login login;
+system("clear");
 
 
 
