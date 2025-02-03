@@ -7,7 +7,7 @@ std::string pad(const std::string& input, int block_size) {
     return padded_input;
 }
 
-std::string encrypt_pin(const std::string& pin, const unsigned char* key, const unsigned char* iv) {
+std::string encrypt(const std::string& pin, const unsigned char* key, const unsigned char* iv) {
     //std::cout << "PIN PRE ENCRYPT:" << pin << std::endl;
     std::string padded_pin = pad(pin, AES_BLOCK_SIZE);
     //std::cout << "PIN POST pad:" << padded_pin << std::endl;
@@ -46,7 +46,7 @@ std::string encrypt_pin(const std::string& pin, const unsigned char* key, const 
     return std::string(reinterpret_cast<char*>(encrypted_pin));
 }
 
-std::string decrypt_pin(const std::string& pin, const unsigned char* key, const unsigned char* iv) {
+std::string decrypt(const std::string& pin, const unsigned char* key, const unsigned char* iv) {
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) {
         std::cerr << "Error creating EVP context!" << std::endl;

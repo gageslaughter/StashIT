@@ -77,7 +77,7 @@ void Login::readRecord(std::fstream &Din, std::string &userPIN) {
     //std::cout << "PIN (PRE): " << pin << std::endl;
 /**/
     
-    std::string decrypted = decrypt_pin(pin, keyArray, ivArray);
+    std::string decrypted = decrypt(pin, keyArray, ivArray);
     if(userPIN != decrypted){
         std::cout << "Incorrect PIN" << std::endl;
         exit(0);
@@ -141,7 +141,7 @@ bool Login::validate(std::string &pin, std::fstream &Dout, bool newUser) {
     std::cout << std::endl;
     */
 
-    std::string encrypted_pin = encrypt_pin(pin, key, iv);
+    std::string encrypted_pin = encrypt(pin, key, iv);
     writeRecord(Dout, encrypted_pin, key, iv);
 
     return true;  

@@ -55,7 +55,7 @@ while(!quit){
         }
 
         case 2:{
-
+            storage.searchPassword(userInput1);
         break;
         }
         
