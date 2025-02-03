@@ -8,7 +8,7 @@
 
 
 Login::Login() {
-    std::fstream file("user.txt", std::ios::in | std::ios::binary);
+    std::fstream file("user.config", std::ios::in | std::ios::binary);
 
     if (file.is_open()) {
         std::cout << "PIN: ";
@@ -16,7 +16,7 @@ Login::Login() {
         validate(password, file, false);
     } 
     else {
-        file.open("user.txt", std::ios::out | std::ios::binary);
+        file.open("user.config", std::ios::out | std::ios::binary);
         
         if (file.is_open()) {
             std::cout << "Please create a PIN: ";
